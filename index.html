@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottery Draw Results Collector</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #4a6ee0;
+            --primary-dark: #3a5ec0;
+            --secondary-color: #6a11cb;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #3498db;
+            --light-color: #f5f7fa;
+            --dark-color: #2c3e50;
+            --gray-color: #95a5a6;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-color);
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Header Styles */
+        header {
+            background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
+            color: white;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            margin-bottom: 25px;
+            box-shadow: var(--box-shadow);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        /* Control Panel */
+        .controls {
+            background-color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+            font-size: 0.95rem;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background-color: var(--gray-color);
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        button.stop {
+            background-color: var(--danger-color);
+        }
+
+        button.stop:hover:not(:disabled) {
+            background-color: #c0392b;
+        }
+
+        button.export {
+            background-color: var(--success-color);
+        }
+
+        button.export:hover {
+            background-color: #219653;
+        }
+
+        button.import {
+            background-color: var(--warning-color);
+        }
+
+        button.import:hover {
+            background-color: #d35400;
+        }
+
+        button.clear {
+            background-color: #e67e22;
+        }
+
+        button.clear:hover {
+            background-color: #d35400;
+        }
+
+        /* Status Panel */
+        .status {
+            background-color: white;
+            padding: 20px;
+            border-radius: var(--border-radius);
+            margin-bottom: 25px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            background-color: #f8f9fa;
+            transition: var(--transition);
+        }
+
+        .status-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .status-label {
+            font-size: 0.85rem;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        .status-value.polling {
+            color: var(--success-color);
+        }
+
+        .status-value.stopped {
+            color: var(--danger-color);
+        }
+
+        /* Data Container */
+        .data-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+
+        @media (min-width: 992px) {
+            .data-container {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .table-container, .chart-container {
+            background-color: white;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: var(--transition);
+        }
+
+        .table-container:hover, .chart-container:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: var(--dark-color);
+            font-size: 1.5rem;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h2 i {
+            color: var(--primary-color);
+        }
+
+        /* Table Styles */
+        .table-wrapper {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 500px;
+        }
+
+        th, td {
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: var(--dark-color);
+            position: sticky;
+            top: 0;
+        }
+
+        tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* Log Container */
+        .log-container {
+            background-color: white;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: var(--transition);
+        }
+
+        .log-container:hover {
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        #logArea {
+            height: 200px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            border: 1px solid #e0e0e0;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .log-entry.error {
+            background-color: #ffeaea;
+            color: var(--danger-color);
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .log-entry.success {
+            background-color: #eaffea;
+            color: var(--success-color);
+            border-left: 4px solid var(--success-color);
+        }
+
+        .log-entry.info {
+            background-color: #eaf4ff;
+            color: var(--info-color);
+            border-left: 4px solid var(--info-color);
+        }
+
+        .log-entry.warning {
+            background-color: #fff4e6;
+            color: var(--warning-color);
+            border-left: 4px solid var(--warning-color);
+        }
+
+        /* File Input */
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-input-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 18px;
+            background-color: var(--warning-color);
+            color: white;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .file-input-label:hover {
+            background-color: #d35400;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            button, .file-input-label {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .status {
+                grid-template-columns: 1fr;
+            }
+            
+            .table-container, .chart-container {
+                padding: 15px;
+            }
+        }
+
+        /* Chart Container */
+        .chart-container canvas {
+            max-height: 300px;
+        }
+
+        /* Loading Animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.8rem;
+            font-weight: normal;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Badge for counts */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 0.75rem;
+            margin-left: 5px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1><i class="fas fa-chart-line"></i> ZENITH PVT DRAW COLLECTOR </h1>
+        <p class="subtitle"></p>
+    </header>
+
+    <div class="controls">
+        <button id="startBtn"><i class="fas fa-play"></i> Start Polling</button>
+        <button id="stopBtn" class="stop" disabled><i class="fas fa-stop"></i> Stop Polling</button>
+        <button id="fetchNowBtn"><i class="fas fa-sync-alt"></i> Fetch Now</button>
+        <button id="exportBtn" class="export"><i class="fas fa-download"></i> Export CSV</button>
+        <label for="importFile" class="file-input-label"><i class="fas fa-upload"></i> Import CSV</label>
+        <input type="file" id="importFile" accept=".csv">
+        <button id="clearBtn" class="clear"><i class="fas fa-trash-alt"></i> Clear Data</button>
+    </div>
+
+    <div class="status">
+        <div class="status-item">
+            <span class="status-label">Polling Status</span>
+            <span id="pollingStatus" class="status-value stopped"><i class="fas fa-circle"></i> Stopped</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Last Fetch</span>
+            <span id="lastFetch" class="status-value"><i class="far fa-clock"></i> Never</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Stored Count</span>
+            <span id="storedCount" class="status-value"><i class="fas fa-database"></i> 0</span>
+        </div>
+        <div class="status-item">
+            <span class="status-label">Storage Type</span>
+            <span id="storageType" class="status-value"><i class="fas fa-hdd"></i> Initializing...</span>
+        </div>
+    </div>
+
+    <div class="data-container">
+        <div class="table-container">
+            <h2><i class="fas fa-table"></i> Latest Draws <span class="badge" id="tableCount">0</span></h2>
+            <div class="table-wrapper">
+                <table id="drawsTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Issue Number</th>
+                            <th>Open Time</th>
+                            <th>Number</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Table rows will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2><i class="fas fa-chart-bar"></i> Number Frequency</h2>
+            <canvas id="frequencyChart"></canvas>
+        </div>
+    </div>
+
+    <div class="log-container">
+        <h2><i class="fas fa-list-alt"></i> Activity Log <span class="badge" id="logCount">0</span></h2>
+        <div id="logArea">
+            <!-- Log entries will be added here -->
+        </div>
+    </div>
+
+    <script>
+        // =============================================================================
+        // CONFIGURATION SECTION - Edit these values to customize the application
+        // =============================================================================
+
+        // API Configuration
+        const API_BASE_URL = 'https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json';
+        // Append timestamp parameter to avoid caching: ?ts=<timestamp>
+
+        // JSON Field Mappings - Adjust these if the API response structure changes
+        const FIELD_ID = 'issueNumber';        // Field name for the draw ID
+        const FIELD_TIME = 'openTime';         // Field name for the draw time
+        const FIELD_NUMBER = 'number';         // Field name for the drawn number
+        const DATA_PATH = 'data.list[0]';      // Path to the draw data in the response
+
+        // Application Settings
+        const POLL_INTERVAL_MS = 30000;        // How often to poll the API (30 seconds)
+        const MAX_HISTORY_LENGTH = 1000;       // Maximum number of draws to store
+        const DISPLAY_COUNT = 50;              // Number of draws to display in the table
+
+        // =============================================================================
+        // END OF CONFIGURATION SECTION
+        // =============================================================================
+
+        // Global variables
+        let pollingInterval = null;
+        let isPolling = false;
+        let lastFetchedPeriod = null;
+        let db = null;
+        let useIndexedDB = false;
+        const DB_NAME = 'LotteryDrawsDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'draws';
+        let chart = null;
+
+        // DOM Elements
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const fetchNowBtn = document.getElementById('fetchNowBtn');
+        const exportBtn = document.getElementById('exportBtn');
+        const importFile = document.getElementById('importFile');
+        const clearBtn = document.getElementById('clearBtn');
+        const pollingStatus = document.getElementById('pollingStatus');
+        const lastFetch = document.getElementById('lastFetch');
+        const storedCount = document.getElementById('storedCount');
+        const storageType = document.getElementById('storageType');
+        const drawsTable = document.getElementById('drawsTable').getElementsByTagName('tbody')[0];
+        const logArea = document.getElementById('logArea');
+        const tableCount = document.getElementById('tableCount');
+        const logCount = document.getElementById('logCount');
+        const frequencyChart = document.getElementById('frequencyChart');
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', init);
+
+        // Initialize the application
+        async function init() {
+            addLog('Initializing application...', 'info');
+            
+            // Initialize storage
+            await initStorage();
+            
+            // Load and display existing data
+            await loadAndDisplayData();
+            
+            // Set up event listeners
+            setupEventListeners();
+            
+            addLog('Application initialized successfully', 'success');
+        }
+
+        // Initialize storage (IndexedDB with fallback to localStorage)
+        async function initStorage() {
+            if ('indexedDB' in window) {
+                try {
+                    const request = indexedDB.open(DB_NAME, DB_VERSION);
+                    
+                    request.onerror = () => {
+                        throw new Error('IndexedDB error');
+                    };
+                    
+                    request.onsuccess = (event) => {
+                        db = event.target.result;
+                        useIndexedDB = true;
+                        storageType.innerHTML = '<i class="fas fa-hdd"></i> IndexedDB';
+                        addLog('Using IndexedDB for storage', 'success');
+                    };
+                    
+                    request.onupgradeneeded = (event) => {
+                        db = event.target.result;
+                        if (!db.objectStoreNames.contains(STORE_NAME)) {
+                            const store = db.createObjectStore(STORE_NAME, { keyPath: FIELD_ID });
+                            store.createIndex('time', FIELD_TIME, { unique: false });
+                            addLog('Created new object store in IndexedDB', 'info');
+                        }
+                    };
+                    
+                    // Wait for DB to be ready
+                    await new Promise((resolve, reject) => {
+                        request.onsuccess = () => resolve();
+                        request.onerror = () => reject('IndexedDB initialization failed');
+                    });
+                    
+                } catch (error) {
+                    addLog(`IndexedDB initialization failed: ${error}. Falling back to localStorage.`, 'error');
+                    useIndexedDB = false;
+                    storageType.innerHTML = '<i class="fas fa-hdd"></i> LocalStorage';
+                }
+            } else {
+                addLog('IndexedDB not supported. Using localStorage.', 'info');
+                useIndexedDB = false;
+                storageType.innerHTML = '<i class="fas fa-hdd"></i> LocalStorage';
+            }
+        }
+
+        // Set up event listeners for UI controls
+        function setupEventListeners() {
+            startBtn.addEventListener('click', startPolling);
+            stopBtn.addEventListener('click', stopPolling);
+            fetchNowBtn.addEventListener('click', fetchData);
+            exportBtn.addEventListener('click', exportToCSV);
+            importFile.addEventListener('change', importFromCSV);
+            clearBtn.addEventListener('click', clearData);
+        }
+
+        // Start polling the API
+        function startPolling() {
+            if (isPolling) return;
+            
+            isPolling = true;
+            pollingStatus.innerHTML = '<i class="fas fa-circle"></i> Polling';
+            pollingStatus.className = 'status-value polling';
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            
+            // Update button states
+            startBtn.innerHTML = '<span class="loading"></span> Polling...';
+            
+            // Fetch immediately and then set interval
+            fetchData();
+            pollingInterval = setInterval(fetchData, POLL_INTERVAL_MS);
+            
+            addLog(`Started polling every ${POLL_INTERVAL_MS/1000} seconds`, 'success');
+        }
+
+        // Stop polling the API
+        function stopPolling() {
+            if (!isPolling) return;
+            
+            isPolling = false;
+            pollingStatus.innerHTML = '<i class="fas fa-circle"></i> Stopped';
+            pollingStatus.className = 'status-value stopped';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            
+            // Update button states
+            startBtn.innerHTML = '<i class="fas fa-play"></i> Start Polling';
+            
+            clearInterval(pollingInterval);
+            pollingInterval = null;
+            
+            addLog('Stopped polling', 'info');
+        }
+
+        // Fetch data from API or fallback to mock data
+        async function fetchData() {
+            addLog('Fetching data from API...', 'info');
+            
+            try {
+                const timestamp = Date.now();
+                const apiUrl = `${API_BASE_URL}?ts=${timestamp}`;
+                
+                const response = await fetch(apiUrl);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                // Extract draw data using the configured path
+                let drawData = data;
+                const pathParts = DATA_PATH.split('.');
+                
+                for (const part of pathParts) {
+                    if (part.includes('[') && part.includes(']')) {
+                        const arrayPart = part.split('[')[0];
+                        const index = parseInt(part.match(/\[(\d+)\]/)[1]);
+                        drawData = drawData[arrayPart][index];
+                    } else {
+                        drawData = drawData[part];
+                    }
+                }
+                
+                if (!drawData || !drawData[FIELD_ID]) {
+                    throw new Error('Invalid data structure received from API');
+                }
+                
+                // Update last fetched period
+                lastFetchedPeriod = drawData[FIELD_ID];
+                
+                // Store the draw data
+                await storeDraw(drawData);
+                
+                // Update UI
+                lastFetch.innerHTML = `<i class="far fa-clock"></i> ${new Date().toLocaleString()}`;
+                await loadAndDisplayData();
+                
+                addLog(`Successfully fetched and stored draw ${drawData[FIELD_ID]}`, 'success');
+                
+            } catch (error) {
+                addLog(`API fetch failed: ${error.message}. Using mock data.`, 'error');
+                
+                // Fallback to mock data
+                const mockData = fetchMockGameResult();
+                await storeDraw(mockData);
+                
+                // Update UI
+                lastFetch.innerHTML = `<i class="far fa-clock"></i> ${new Date().toLocaleString()}`;
+                await loadAndDisplayData();
+                
+                addLog(`Stored mock draw ${mockData[FIELD_ID]}`, 'info');
+            }
+        }
+
+        // Generate mock game result when API fails
+        function fetchMockGameResult() {
+            const currentTimestamp = Math.floor(Date.now() / 1000);
+            const mockIssueNumber = lastFetchedPeriod ? (BigInt(lastFetchedPeriod) + 1n).toString() : '20240701001';
+            const mockNumber = Math.floor(Math.random() * 10); // 0-9
+            
+            return {
+                [FIELD_ID]: mockIssueNumber,
+                [FIELD_NUMBER]: mockNumber.toString(),
+                [FIELD_TIME]: new Date(currentTimestamp * 1000).toLocaleString(),
+            };
+        }
+
+        // Store a draw in the database
+        async function storeDraw(draw) {
+            if (useIndexedDB) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    
+                    const request = store.put(draw);
+                    
+                    request.onsuccess = () => {
+                        resolve();
+                    };
+                    
+                    request.onerror = () => {
+                        reject('Failed to store draw in IndexedDB');
+                    };
+                });
+            } else {
+                // Use localStorage
+                const key = `draw_${draw[FIELD_ID]}`;
+                localStorage.setItem(key, JSON.stringify(draw));
+                
+                // Maintain max history length
+                const allKeys = Object.keys(localStorage)
+                    .filter(key => key.startsWith('draw_'))
+                    .sort((a, b) => {
+                        const aId = a.replace('draw_', '');
+                        const bId = b.replace('draw_', '');
+                        return bId.localeCompare(aId);
+                    });
+                
+                if (allKeys.length > MAX_HISTORY_LENGTH) {
+                    for (let i = MAX_HISTORY_LENGTH; i < allKeys.length; i++) {
+                        localStorage.removeItem(allKeys[i]);
+                    }
+                }
+            }
+        }
+
+        // Get all stored draws
+        async function getAllDraws() {
+            if (useIndexedDB) {
+                return new Promise((resolve, reject) => {
+                    const transaction = db.transaction([STORE_NAME], 'readonly');
+                    const store = transaction.objectStore(STORE_NAME);
+                    const request = store.getAll();
+                    
+                    request.onsuccess = () => {
+                        resolve(request.result);
+                    };
+                    
+                    request.onerror = () => {
+                        reject('Failed to retrieve draws from IndexedDB');
+                    };
+                });
+            } else {
+                // Use localStorage
+                const draws = [];
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('draw_')) {
+                        const draw = JSON.parse(localStorage.getItem(key));
+                        draws.push(draw);
+                    }
+                }
+                
+                // Sort by issue number (descending)
+                return draws.sort((a, b) => b[FIELD_ID].localeCompare(a[FIELD_ID]));
+            }
+        }
+
+        // Load and display data in the UI
+        async function loadAndDisplayData() {
+            try {
+                const draws = await getAllDraws();
+                storedCount.innerHTML = `<i class="fas fa-database"></i> ${draws.length}`;
+                
+                // Update table with latest draws
+                updateDrawsTable(draws.slice(0, DISPLAY_COUNT));
+                
+                // Update frequency chart
+                updateFrequencyChart(draws);
+                
+            } catch (error) {
+                addLog(`Error loading data: ${error}`, 'error');
+            }
+        }
+
+        // Update the draws table with the provided data
+        function updateDrawsTable(draws) {
+            drawsTable.innerHTML = '';
+            tableCount.textContent = draws.length;
+            
+            draws.forEach((draw, index) => {
+                const row = drawsTable.insertRow();
+                
+                const cell1 = row.insertCell(0);
+                const cell2 = row.insertCell(1);
+                const cell3 = row.insertCell(2);
+                const cell4 = row.insertCell(3);
+                
+                cell1.textContent = index + 1;
+                cell2.textContent = draw[FIELD_ID];
+                cell3.textContent = draw[FIELD_TIME];
+                
+                // Make the number more prominent
+                const numberCell = document.createElement('span');
+                numberCell.textContent = draw[FIELD_NUMBER];
+                numberCell.style.fontWeight = 'bold';
+                numberCell.style.fontSize = '1.1em';
+                numberCell.style.color = '#2c3e50';
+                cell4.appendChild(numberCell);
+            });
+        }
+
+        // Update the frequency chart with the provided data
+        function updateFrequencyChart(draws) {
+            // Calculate frequency of each number (0-9)
+            const frequency = Array(10).fill(0);
+            
+            draws.forEach(draw => {
+                const number = parseInt(draw[FIELD_NUMBER]);
+                if (!isNaN(number) && number >= 0 && number <= 9) {
+                    frequency[number]++;
+                }
+            });
+            
+            // Destroy existing chart if it exists
+            if (chart) {
+                chart.destroy();
+            }
+            
+            // Create new chart with Chart.js
+            chart = new Chart(frequencyChart, {
+                type: 'bar',
+                data: {
+                    labels: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'],
+                    datasets: [{
+                        label: 'Frequency',
+                        data: frequency,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.7)',
+                            'rgba(54, 162, 235, 0.7)',
+                            'rgba(255, 206, 86, 0.7)',
+                            'rgba(75, 192, 192, 0.7)',
+                            'rgba(153, 102, 255, 0.7)',
+                            'rgba(255, 159, 64, 0.7)',
+                            'rgba(199, 199, 199, 0.7)',
+                            'rgba(83, 102, 255, 0.7)',
+                            'rgba(40, 159, 64, 0.7)',
+                            'rgba(210, 99, 132, 0.7)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(199, 199, 199, 1)',
+                            'rgba(83, 102, 255, 1)',
+                            'rgba(40, 159, 64, 1)',
+                            'rgba(210, 99, 132, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            enabled: true,
+                            callbacks: {
+                                label: function(context) {
+                                    return `Frequency: ${context.raw}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Frequency'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Number'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Export stored data to CSV
+        async function exportToCSV() {
+            try {
+                const draws = await getAllDraws();
+                
+                if (draws.length === 0) {
+                    addLog('No data to export', 'info');
+                    return;
+                }
+                
+                // Create CSV content
+                const headers = [FIELD_ID, FIELD_TIME, FIELD_NUMBER];
+                let csvContent = headers.join(',') + '\n';
+                
+                draws.forEach(draw => {
+                    const row = headers.map(header => {
+                        let value = draw[header] || '';
+                        // Escape quotes and wrap in quotes if contains comma
+                        value = value.toString().replace(/"/g, '""');
+                        if (value.includes(',')) {
+                            value = `"${value}"`;
+                        }
+                        return value;
+                    });
+                    csvContent += row.join(',') + '\n';
+                });
+                
+                // Create download link
+                const blob = new Blob([csvContent], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `lottery_draws_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                addLog(`Exported ${draws.length} draws to CSV`, 'success');
+                
+            } catch (error) {
+                addLog(`Error exporting data: ${error}`, 'error');
+            }
+        }
+
+        // Import data from CSV
+        async function importFromCSV(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            
+            reader.onload = async (e) => {
+                try {
+                    const csvContent = e.target.result;
+                    const lines = csvContent.split('\n');
+                    const headers = lines[0].split(',').map(h => h.trim());
+                    
+                    // Validate headers
+                    if (!headers.includes(FIELD_ID) || !headers.includes(FIELD_NUMBER) || !headers.includes(FIELD_TIME)) {
+                        throw new Error('CSV file does not have the expected columns');
+                    }
+                    
+                    let importedCount = 0;
+                    
+                    // Process each line (skip header)
+                    for (let i = 1; i < lines.length; i++) {
+                        if (!lines[i].trim()) continue;
+                        
+                        const values = parseCSVLine(lines[i]);
+                        if (values.length !== headers.length) continue;
+                        
+                        const draw = {};
+                        headers.forEach((header, index) => {
+                            draw[header] = values[index].replace(/^"|"$/g, ''); // Remove quotes
+                        });
+                        
+                        // Store the draw (will deduplicate by issueNumber)
+                        await storeDraw(draw);
+                        importedCount++;
+                    }
+                    
+                    // Update UI
+                    await loadAndDisplayData();
+                    
+                    addLog(`Imported ${importedCount} draws from CSV`, 'success');
+                    
+                } catch (error) {
+                    addLog(`Error importing CSV: ${error}`, 'error');
+                }
+                
+                // Reset file input
+                event.target.value = '';
+            };
+            
+            reader.readAsText(file);
+        }
+
+        // Parse a CSV line, handling quoted values with commas
+        function parseCSVLine(line) {
+            const result = [];
+            let inQuotes = false;
+            let currentValue = '';
+            
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(currentValue);
+                    currentValue = '';
+                } else {
+                    currentValue += char;
+                }
+            }
+            
+            result.push(currentValue);
+            return result;
+        }
+
+        // Clear all stored data
+        async function clearData() {
+            if (!confirm('Are you sure you want to clear all data? This action cannot be undone.')) {
+                return;
+            }
+            
+            try {
+                if (useIndexedDB) {
+                    const transaction = db.transaction([STORE_NAME], 'readwrite');
+                    const store = transaction.objectStore(STORE_NAME);
+                    store.clear();
+                    
+                    await new Promise((resolve, reject) => {
+                        transaction.oncomplete = () => resolve();
+                        transaction.onerror = () => reject('Failed to clear IndexedDB');
+                    });
+                } else {
+                    // Clear localStorage
+                    const keysToRemove = [];
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key.startsWith('draw_')) {
+                            keysToRemove.push(key);
+                        }
+                    }
+                    
+                    keysToRemove.forEach(key => localStorage.removeItem(key));
+                }
+                
+                // Reset last fetched period
+                lastFetchedPeriod = null;
+                
+                // Update UI
+                await loadAndDisplayData();
+                
+                addLog('All data cleared', 'success');
+                
+            } catch (error) {
+                addLog(`Error clearing data: ${error}`, 'error');
+            }
+        }
+
+        // Add a log entry to the log area
+        function addLog(message, type = 'info') {
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            
+            // Add icon based on log type
+            let icon = 'info-circle';
+            if (type === 'error') icon = 'exclamation-circle';
+            if (type === 'success') icon = 'check-circle';
+            if (type === 'warning') icon = 'exclamation-triangle';
+            
+            logEntry.innerHTML = `<i class="fas fa-${icon}"></i> <span>[${new Date().toLocaleTimeString()}] ${message}</span>`;
+            
+            logArea.appendChild(logEntry);
+            logArea.scrollTop = logArea.scrollHeight;
+            
+            // Update log count
+            logCount.textContent = logArea.children.length;
+            
+            // Keep only the last 100 log entries
+            while (logArea.children.length > 100) {
+                logArea.removeChild(logArea.firstChild);
+                logCount.textContent = logArea.children.length;
+            }
+        }
+    </script>
+</body>
+</html>
